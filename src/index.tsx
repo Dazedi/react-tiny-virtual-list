@@ -1,5 +1,6 @@
 import * as React from 'react';
 import * as PropTypes from 'prop-types';
+import * as _ from "./throttle";
 import SizeAndPositionManager, {ItemSize} from './SizeAndPositionManager';
 import {
   ALIGNMENT,
@@ -57,6 +58,7 @@ export interface Props {
   stickyIndices?: number[];
   style?: React.CSSProperties;
   width?: number | string;
+  throttle?: number;
   onItemsRendered?({startIndex, stopIndex}: RenderedRows): void;
   onScroll?(offset: number, event: UIEvent): void;
   renderItem(itemInfo: ItemInfo): React.ReactNode;
@@ -131,7 +133,8 @@ export default class VirtualList extends React.PureComponent<Props, State> {
     ]),
     stickyIndices: PropTypes.arrayOf(PropTypes.number),
     style: PropTypes.object,
-    width: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+	width: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+	throttle: PropTypes.number,
   };
 
   itemSizeGetter = (itemSize: Props['itemSize']) => {
@@ -156,6 +159,13 @@ export default class VirtualList extends React.PureComponent<Props, State> {
   private rootNode: HTMLElement;
 
   private styleCache: StyleCache = {};
+
+  constructor(props: Props) {
+	super(props);
+	if (typeof props.throttle === 'number') {
+		this.handleScroll = _.throttle(this.handleScroll, props.throttle);
+	}
+  }
 
   componentDidMount() {
     const {scrollOffset, scrollToIndex} = this.props;
@@ -274,7 +284,8 @@ export default class VirtualList extends React.PureComponent<Props, State> {
 
   render() {
     const {
-      estimatedItemSize,
+	  estimatedItemSize,
+	  throttle: ignore,
       height,
       overscanCount = 3,
       renderItem,
